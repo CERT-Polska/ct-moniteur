@@ -344,7 +344,13 @@ class TiledLogClient:
 
         # Process complete tiles
         for tile_idx in range(start_tile, end_tile):
-            leaves = await self.fetch_tile(tile_idx)
+            try:
+                leaves = await self.fetch_tile(tile_idx)
+            except httpx2.HTTPStatusError as e:
+                if e.response.status_code != 404:
+                    raise
+                logger.warning(f"Tile {tile_idx} not yet available from {self.log_meta.url}")
+                return
 
             for i, leaf in enumerate(leaves):
                 entry_index = tile_idx * self.TILE_SIZE + i
@@ -357,7 +363,13 @@ class TiledLogClient:
         # Process partial tile if exists
         partial_size = current_size % self.TILE_SIZE
         if allow_partial and partial_size > 0 and end_tile * self.TILE_SIZE < current_size:
-            leaves = await self.fetch_tile(end_tile, partial_width=partial_size)
+            try:
+                leaves = await self.fetch_tile(end_tile, partial_width=partial_size)
+            except httpx2.HTTPStatusError as e:
+                if e.response.status_code != 404:
+                    raise
+                logger.warning(f"Tile {end_tile} not yet available from {self.log_meta.url}")
+                return
 
             for i, leaf in enumerate(leaves):
                 entry_index = end_tile * self.TILE_SIZE + i
