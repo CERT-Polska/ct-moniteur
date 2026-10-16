@@ -8,7 +8,7 @@ This library is an independent project and is not an official product. It is pro
 
 ## Features
 
-- **Concurrent monitoring** - Built on `asyncio` and `httpx` to monitor dozens of logs simultaneously
+- **Concurrent monitoring** - Built on `asyncio` and `httpx2` to monitor dozens of logs simultaneously
 - **Dual protocol support** - Works with both classic and tiled CT logs
 - **State persistence** - Save and resume monitoring from previous state
 - **Periodic log list refresh** - Automatically discover new logs and remove retired ones

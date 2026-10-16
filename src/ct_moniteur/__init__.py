@@ -12,7 +12,7 @@ from datetime import datetime
 from enum import IntEnum
 from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Union, cast
 
-import httpx
+import httpx2
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 
@@ -121,12 +121,12 @@ class TiledLogClient:
         log_meta: LogMeta,
         timeout: float = 30.0,
         user_agent: Optional[str] = None,
-        transport: Optional[httpx.AsyncBaseTransport] = None,
+        transport: Optional[httpx2.AsyncBaseTransport] = None,
     ):
         self.log_meta = log_meta
         self.timeout = timeout
         self.user_agent = user_agent or self.DEFAULT_USER_AGENT
-        self._client = httpx.AsyncClient(
+        self._client = httpx2.AsyncClient(
             base_url=log_meta.url,
             timeout=self.timeout,
             headers={"User-Agent": self.user_agent},
@@ -449,12 +449,12 @@ class ClassicLogClient:
         log_meta: LogMeta,
         timeout: float = 30.0,
         user_agent: Optional[str] = None,
-        transport: Optional[httpx.AsyncBaseTransport] = None,
+        transport: Optional[httpx2.AsyncBaseTransport] = None,
     ):
         self.log_meta = log_meta
         self.timeout = timeout
         self.user_agent = user_agent or self.DEFAULT_USER_AGENT
-        self._client = httpx.AsyncClient(
+        self._client = httpx2.AsyncClient(
             base_url=log_meta.url,
             timeout=self.timeout,
             headers={"User-Agent": self.user_agent},
@@ -950,7 +950,7 @@ class CTMoniteur:
     async def _fetch_log_list(self) -> Dict[str, Any]:
         """Fetch the list of all CT logs."""
         headers = {"User-Agent": self.user_agent or self.DEFAULT_USER_AGENT}
-        async with httpx.AsyncClient(headers=headers, transport=self._transport) as client:
+        async with httpx2.AsyncClient(headers=headers, transport=self._transport) as client:
             response = await client.get(LOG_LIST_URL, timeout=10.0)
             response.raise_for_status()
             return cast(Dict[str, Any], response.json())
@@ -1116,7 +1116,7 @@ class CTMoniteur:
             Dictionary containing operators and their logs
         """
         headers = {"User-Agent": user_agent or CTMoniteur.DEFAULT_USER_AGENT}
-        async with httpx.AsyncClient(headers=headers, transport=RateLimitedTransport()) as client:
+        async with httpx2.AsyncClient(headers=headers, transport=RateLimitedTransport()) as client:
             response = await client.get(LOG_LIST_URL, timeout=10.0)
             response.raise_for_status()
             return cast(Dict[str, List[Dict[str, Any]]], response.json())

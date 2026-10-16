@@ -1,4 +1,4 @@
-"""Rate limiting transport for httpx."""
+"""Rate limiting transport for httpx2."""
 
 import asyncio
 import time
@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 import logging
 
-import httpx
+import httpx2
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,8 @@ class HostData:
     rate_limit: Optional[float] = None
 
 
-class RateLimitedTransport(httpx.AsyncHTTPTransport):
-    """httpx transport that learns and enforces rate limits from 429 responses."""
+class RateLimitedTransport(httpx2.AsyncHTTPTransport):
+    """httpx2 transport that learns and enforces rate limits from 429 responses."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -32,7 +32,7 @@ class RateLimitedTransport(httpx.AsyncHTTPTransport):
             self._host_data[host] = HostData()
         return self._host_data[host]
 
-    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+    async def handle_async_request(self, request: httpx2.Request) -> httpx2.Response:
         attempt = 0
         host = request.url.host
 
