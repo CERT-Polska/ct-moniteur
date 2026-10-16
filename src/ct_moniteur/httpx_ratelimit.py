@@ -3,6 +3,7 @@
 import asyncio
 import time
 from dataclasses import dataclass, field
+from email.utils import parsedate_to_datetime
 from typing import Optional
 import logging
 
@@ -74,11 +75,17 @@ class RateLimitedTransport(httpx2.AsyncHTTPTransport):
                     host_data.first_request_time = None
                     host_data.request_count = 0
 
-                    retry_after = response.headers.get("Retry-After", default_retry_after)
-                    try:
-                        wait_time = float(retry_after)
-                    except ValueError:
-                        wait_time = default_retry_after
+                    wait_time = default_retry_after
+                    if retry_after := response.headers.get("Retry-After"):
+                        if retry_after.isdecimal():
+                            wait_time = int(retry_after)
+                        else:
+                            try:
+                                retry_at = parsedate_to_datetime(retry_after)
+                                if retry_at.tzinfo is not None:
+                                    wait_time = max(retry_at.timestamp() - time.time(), 1.0)
+                            except ValueError:
+                                pass
 
                     if attempt > 1:
                         logger.warning(
