@@ -320,12 +320,15 @@ class TiledLogClient:
     async def fetch_entries_raw(
         self,
         start_index: int,
+        allow_partial: bool = True,
     ) -> AsyncIterator[tuple[int, LogEntry]]:
         """
         Fetch new entries from the tiled log since the given index (raw version).
 
         Args:
             start_index: Index of first entry to retrieve (inclusive)
+            allow_partial: Whether to fetch the trailing partial tile. If False,
+                only entries in full tiles are returned.
 
         Yields:
             Tuples of (entry_index, LogEntry) for new entries (unparsed)
@@ -353,7 +356,7 @@ class TiledLogClient:
 
         # Process partial tile if exists
         partial_size = current_size % self.TILE_SIZE
-        if partial_size > 0 and end_tile * self.TILE_SIZE < current_size:
+        if allow_partial and partial_size > 0 and end_tile * self.TILE_SIZE < current_size:
             leaves = await self.fetch_tile(end_tile, partial_width=partial_size)
 
             for i, leaf in enumerate(leaves):
@@ -370,17 +373,20 @@ class TiledLogClient:
     async def fetch_entries(
         self,
         start_index: int,
+        allow_partial: bool = True,
     ) -> AsyncIterator[CertificateEntry]:
         """
         Fetch new entries from the tiled log since the given index.
 
         Args:
             start_index: Index of first entry to retrieve (inclusive)
+            allow_partial: Whether to fetch the trailing partial tile. If False,
+                only entries in full tiles are returned.
 
         Yields:
             CertificateEntry objects for new entries
         """
-        async for entry_index, leaf in self.fetch_entries_raw(start_index):
+        async for entry_index, leaf in self.fetch_entries_raw(start_index, allow_partial):
             try:
                 source = EntrySource(index=entry_index, log=self.log_meta)
                 entry = CertificateParser.parse_log_entry(leaf, source)
@@ -409,20 +415,29 @@ class TiledLogClient:
             async with TiledLogClient(url, name, operator) as client:
                 async for entry in client.watch():
                     print(entry.domains)
+
+        To avoid repeatedly downloading the same partial tile, the trailing
+        partial tile is only fetched when the previous poll returned no entries.
+        On slow logs this can delay new entries by up to one poll interval.
         """
         current_index = start_index
         if current_index is None:
             current_index = await self.fetch_tree_size()
             await asyncio.sleep(poll_interval)
 
+        allow_partial = False
         lag: float = 0
         while True:
             loop = asyncio.get_running_loop()
             cycle_start = loop.time()
 
-            async for entry in self.fetch_entries(current_index + 1):
+            got_entries = False
+            async for entry in self.fetch_entries(current_index + 1, allow_partial):
                 current_index = entry.source.index
+                got_entries = True
                 yield entry
+
+            allow_partial = not got_entries
 
             # Sleep for the remaining time in the poll interval
             remaining_time = poll_interval - (loop.time() - cycle_start)
