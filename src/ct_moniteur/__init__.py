@@ -113,7 +113,7 @@ class MoniteurStats:
 class TiledLogClient:
     """Client for interacting with tiled CT logs"""
 
-    DEFAULT_USER_AGENT = f"CT-Moniteur/{__version__}"
+    DEFAULT_USER_AGENT = f"CT-Moniteur/{__version__} (github.com/CERT-Polska/ct-moniteur)"
     TILE_SIZE = 256
 
     def __init__(
@@ -457,7 +457,7 @@ class TiledLogClient:
 class ClassicLogClient:
     """Client for interacting with classic CT logs"""
 
-    DEFAULT_USER_AGENT = f"CT-Moniteur/{__version__}"
+    DEFAULT_USER_AGENT = f"CT-Moniteur/{__version__} (github.com/CERT-Polska/ct-moniteur)"
 
     def __init__(
         self,
@@ -799,7 +799,7 @@ class CTMoniteur:
     to save and resume from previous state.
     """
 
-    DEFAULT_USER_AGENT = f"CT-Moniteur/{__version__}"
+    DEFAULT_USER_AGENT = f"CT-Moniteur/{__version__} (github.com/CERT-Polska/ct-moniteur)"
 
     def __init__(
         self,
