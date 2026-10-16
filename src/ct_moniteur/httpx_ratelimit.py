@@ -58,6 +58,7 @@ class RateLimitedTransport(httpx2.AsyncHTTPTransport):
             response = await super().handle_async_request(request)
 
             if response.status_code == 429:
+                await response.aclose()
                 host_data = self._get_host_data(host)
                 async with host_data.lock:
                     if host_data.first_request_time and host_data.request_count > 1:
