@@ -494,6 +494,7 @@ class ClassicLogClient:
         self.log_meta = log_meta
         self.timeout = timeout
         self.user_agent = user_agent or self.DEFAULT_USER_AGENT
+        self._page_size: Optional[int] = None
         self._client = httpx2.AsyncClient(
             base_url=log_meta.url,
             timeout=self.timeout,
@@ -640,18 +641,34 @@ class ClassicLogClient:
     async def fetch_entries_raw(
         self,
         start_index: int,
+        allow_partial: bool = True,
     ) -> AsyncIterator[tuple[int, LogEntry]]:
         """
         Fetch new entries from the classic log since the given index (raw version).
 
         Args:
             start_index: Index of first entry to retrieve (inclusive)
+            allow_partial: Whether to fetch the trailing partial page. If False,
+                only entries in full pages are returned.
 
         Yields:
             Tuples of (entry_index, LogEntry) for new entries (unparsed)
         """
         sth = await self.get_sth()
         tree_size = sth.tree_size
+
+        if self._page_size is None and tree_size > 1024:
+            # Logs return at most a fixed number of entries per request, a power of two
+            page_size = len(await self.get_entries(0, 1023))
+            if page_size.bit_count() != 1:
+                logger.warning(
+                    f"Page size {page_size} from {self.log_meta.url} is not a power of two"
+                )
+                page_size = 0
+            self._page_size = page_size
+
+        if not allow_partial and self._page_size:
+            tree_size -= tree_size % self._page_size
 
         if tree_size <= start_index:
             return
@@ -671,17 +688,20 @@ class ClassicLogClient:
     async def fetch_entries(
         self,
         start_index: int,
+        allow_partial: bool = True,
     ) -> AsyncIterator[CertificateEntry]:
         """
         Fetch new entries from the classic log since the given index.
 
         Args:
             start_index: Index of first entry to retrieve (inclusive)
+            allow_partial: Whether to fetch the trailing partial page. If False,
+                only entries in full pages are returned.
 
         Yields:
             CertificateEntry objects for new entries
         """
-        async for entry_index, log_entry in self.fetch_entries_raw(start_index):
+        async for entry_index, log_entry in self.fetch_entries_raw(start_index, allow_partial):
             try:
                 source = EntrySource(index=entry_index, log=self.log_meta)
                 entry = CertificateParser.parse_log_entry(log_entry, source)
@@ -710,20 +730,29 @@ class ClassicLogClient:
             async with ClassicLogClient(url, name, operator) as client:
                 async for entry in client.watch():
                     print(entry.domains)
+
+        To keep requests aligned to pages, the trailing partial page is only
+        fetched when the previous poll returned no entries. On slow logs this
+        can delay new entries by up to one poll interval.
         """
         current_index = start_index
         if current_index is None:
             current_index = await self.fetch_tree_size()
             await asyncio.sleep(poll_interval)
 
+        allow_partial = False
         lag: float = 0
         while True:
             loop = asyncio.get_running_loop()
             cycle_start = loop.time()
 
-            async for entry in self.fetch_entries(current_index + 1):
+            got_entries = False
+            async for entry in self.fetch_entries(current_index + 1, allow_partial):
                 current_index = entry.source.index
+                got_entries = True
                 yield entry
+
+            allow_partial = not got_entries
 
             # Sleep for the remaining time in the poll interval
             remaining_time = poll_interval - (loop.time() - cycle_start)
