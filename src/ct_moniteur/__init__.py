@@ -19,6 +19,7 @@ from cryptography.hazmat.backends import default_backend
 
 from .binary_reader import BinaryReader, DataType, Endianness
 from .httpx_ratelimit import RateLimitedTransport
+from .itertools_compat import batched
 
 __version__ = "1.0.0"
 
@@ -483,6 +484,7 @@ class ClassicLogClient:
     """Client for interacting with classic CT logs"""
 
     DEFAULT_USER_AGENT = f"CT-Moniteur/{__version__} (github.com/CERT-Polska/ct-moniteur)"
+    GET_ENTRIES_CONCURRENCY = 2
 
     def __init__(
         self,
@@ -674,16 +676,31 @@ class ClassicLogClient:
             return
 
         current_start = start_index
+        step = self._page_size or tree_size
         while current_start < tree_size:
-            entries = await self.get_entries(current_start, tree_size - 1)
+            starts = range(current_start, tree_size, step)
+            for batch in batched(starts, self.GET_ENTRIES_CONCURRENCY):
+                results = await asyncio.gather(
+                    *(self.get_entries(start, min(start + step, tree_size) - 1) for start in batch),
+                    return_exceptions=True,
+                )
 
-            if not entries:
-                break
+                for start, entries in zip(batch, results):
+                    if start != current_start:
+                        break
+                    if isinstance(entries, BaseException):
+                        raise entries
+                    if not entries:
+                        return
 
-            for i, log_entry in enumerate(entries):
-                yield current_start + i, log_entry
+                    for i, log_entry in enumerate(entries):
+                        yield start + i, log_entry
 
-            current_start += len(entries)
+                    current_start += len(entries)
+
+                if current_start != batch[-1] + step:
+                    # A response was shorter than requested, continue from where it ended
+                    break
 
     async def fetch_entries(
         self,
