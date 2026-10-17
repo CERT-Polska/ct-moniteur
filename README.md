@@ -216,12 +216,14 @@ CTMoniteur(
     skip_retired: bool = True,       # Skip retired logs
     poll_interval: float = 15.0,     # Polling interval in seconds
     timeout: float = 30.0,           # HTTP timeout
-    user_agent: str = None,          # Custom user agent
+    user_agent: str = None,          # Custom user agent, must include contact info
     max_retries: int = 3,            # Max retries per log
     retry_delay: float = 10.0,       # Delay between retries
     refresh_interval: float = 6.0    # Log list refresh interval in hours (0 to disable)
 )
 ```
+
+A custom `user_agent` must contain an email address, an HTTPS URL or a `github.com/` link, since some tiled log operators rate-limit anonymous clients.
 
 **Methods:**
 - `start()` - Start monitoring all logs

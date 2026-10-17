@@ -26,6 +26,15 @@ logger = logging.getLogger(__name__)
 LOG_LIST_URL = "https://www.gstatic.com/ct/log_list/v3/log_list.json"
 
 
+def _validate_user_agent(user_agent: str) -> None:
+    """Require contact info, as some tiled logs rate-limit anonymous clients."""
+    if not any(marker in user_agent for marker in ("@", "https://", "github.com/")):
+        raise ValueError(
+            "User-Agent must include contact info: an email address, an HTTPS URL "
+            "or a github.com/ link"
+        )
+
+
 class EntryType(IntEnum):
     """CT log entry types"""
 
@@ -123,6 +132,9 @@ class TiledLogClient:
         user_agent: Optional[str] = None,
         transport: Optional[httpx2.AsyncBaseTransport] = None,
     ):
+        if user_agent:
+            _validate_user_agent(user_agent)
+
         self.log_meta = log_meta
         self.timeout = timeout
         self.user_agent = user_agent or self.DEFAULT_USER_AGENT
@@ -836,11 +848,15 @@ class CTMoniteur:
             skip_retired: Skip retired logs
             poll_interval: How often to poll for new entries (seconds)
             timeout: HTTP request timeout
-            user_agent: Custom user agent string
+            user_agent: Custom user agent string. Must include an email address, an HTTPS
+                URL or a github.com/ link
             max_retries: Maximum retries for failed log connections
             retry_delay: Delay between retries (seconds)
             refresh_interval: How often to refresh the log list (hours, 0 to disable)
         """
+        if user_agent:
+            _validate_user_agent(user_agent)
+
         self.callback = callback
         self.skip_retired = skip_retired
         self.poll_interval = poll_interval
