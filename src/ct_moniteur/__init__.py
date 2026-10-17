@@ -1101,7 +1101,8 @@ class CTMoniteur:
                     )
 
                 logger.warning(
-                    f"Error watching {client.log_meta.url} (retry {retries}/{self.max_retries}): {e}"
+                    f"Error watching {client.log_meta.url} (retry {retries}/{self.max_retries}): "
+                    f"{str(e) or type(e).__name__}"
                 )
 
                 if retries >= self.max_retries:
