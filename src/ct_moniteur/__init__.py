@@ -6,11 +6,12 @@ Supports both classic and tiled CT logs with async operations and state persiste
 import asyncio
 import base64
 import hashlib
+import inspect
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import IntEnum
-from typing import Any, AsyncIterator, Callable, Dict, List, Optional, Union, cast
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Union, cast
 
 import httpx2
 from cryptography import x509
@@ -827,9 +828,7 @@ class CTMoniteur:
 
     def __init__(
         self,
-        callback: Union[
-            Callable[[CertificateEntry], None], Callable[[CertificateEntry], asyncio.Future]
-        ],
+        callback: Callable[[CertificateEntry], Optional[Awaitable[None]]],
         initial_state: Optional[Dict[str, int]] = None,
         skip_retired: bool = True,
         poll_interval: float = 30,
@@ -1036,10 +1035,9 @@ class CTMoniteur:
 
                     # Call user callback
                     try:
-                        if asyncio.iscoroutinefunction(self.callback):
-                            await self.callback(entry)
-                        else:
-                            self.callback(entry)
+                        result = self.callback(entry)
+                        if inspect.isawaitable(result):
+                            await result
                     except Exception as e:
                         logger.error(
                             f"Error in callback for {entry.source.log.url}: {e}", exc_info=True
