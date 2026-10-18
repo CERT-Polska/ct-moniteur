@@ -679,6 +679,9 @@ class ClassicLogClient:
             return
 
         current_start = start_index
+        if self._page_size:
+            # Start at the page boundary
+            current_start -= current_start % self._page_size
         step = self._page_size or tree_size
         concurrency = max(self.ENTRIES_PER_BATCH // step, 1)
         while current_start < tree_size:
@@ -698,7 +701,8 @@ class ClassicLogClient:
                         return
 
                     for i, log_entry in enumerate(entries):
-                        yield start + i, log_entry
+                        if start + i >= start_index:
+                            yield start + i, log_entry
 
                     current_start += len(entries)
 
