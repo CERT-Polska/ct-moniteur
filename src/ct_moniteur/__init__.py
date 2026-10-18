@@ -662,6 +662,9 @@ class ClassicLogClient:
         if self._page_size is None and tree_size > 1024:
             # Logs return at most a fixed number of entries per request, a power of two
             page_size = len(await self.get_entries(0, 1023))
+            if page_size < 256:
+                # Some logs return 256 entries only for requests of exactly 256 aligned entries
+                page_size = len(await self.get_entries(0, 255))
             if page_size.bit_count() != 1:
                 logger.warning(
                     f"Page size {page_size} from {self.log_meta.url} is not a power of two"
