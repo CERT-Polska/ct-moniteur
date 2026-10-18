@@ -484,7 +484,7 @@ class ClassicLogClient:
     """Client for interacting with classic CT logs"""
 
     DEFAULT_USER_AGENT = f"CT-Moniteur/{__version__} (github.com/CERT-Polska/ct-moniteur)"
-    GET_ENTRIES_CONCURRENCY = 2
+    ENTRIES_PER_BATCH = 256
 
     def __init__(
         self,
@@ -680,9 +680,10 @@ class ClassicLogClient:
 
         current_start = start_index
         step = self._page_size or tree_size
+        concurrency = max(self.ENTRIES_PER_BATCH // step, 1)
         while current_start < tree_size:
             starts = range(current_start, tree_size, step)
-            for batch in batched(starts, self.GET_ENTRIES_CONCURRENCY):
+            for batch in batched(starts, concurrency):
                 results = await asyncio.gather(
                     *(self.get_entries(start, min(start + step, tree_size) - 1) for start in batch),
                     return_exceptions=True,
