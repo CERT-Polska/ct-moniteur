@@ -448,7 +448,7 @@ class TiledLogClient:
         """
         current_index = start_index
         if current_index is None:
-            current_index = await self.fetch_tree_size()
+            current_index = await self.fetch_tree_size() - 1
             await asyncio.sleep(poll_interval)
 
         allow_partial = False
@@ -762,7 +762,7 @@ class ClassicLogClient:
         """
         current_index = start_index
         if current_index is None:
-            current_index = await self.fetch_tree_size()
+            current_index = await self.fetch_tree_size() - 1
             await asyncio.sleep(poll_interval)
 
         allow_partial = False
