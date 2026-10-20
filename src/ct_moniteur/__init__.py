@@ -839,7 +839,7 @@ class CertificateParser:
         else:
             raise ValueError(f"Unsupported algorithm: {algorithm}")
 
-        return ":".join(f"{b:02X}" for b in h)
+        return h.hex(":").upper()
 
     @classmethod
     def parse_log_entry(cls, log_entry: LogEntry, source: EntrySource) -> CertificateEntry:
