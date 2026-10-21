@@ -68,9 +68,9 @@ class RateLimitedTransport(httpx2.AsyncHTTPTransport):
                         logger.info(
                             f"[{host}] Rate limit learned: {host_data.rate_limit:.2f} req/s"
                         )
-                        default_retry_after = min(1.0 / host_data.rate_limit, 10.0)
+                        default_retry_after = min(1.0 / host_data.rate_limit, 1.0)
                     else:
-                        default_retry_after = 5.0
+                        default_retry_after = 1.0
 
                     host_data.first_request_time = None
                     host_data.request_count = 0
