@@ -925,7 +925,13 @@ class CTMoniteur:
         self._running = False
         self._stats = MoniteurStats()
         self._state_lock = asyncio.Lock()
-        self._transport = RateLimitedTransport()
+        self._transport = RateLimitedTransport(
+            limits=httpx2.Limits(
+                max_connections=100,
+                max_keepalive_connections=100,
+                keepalive_expiry=60,
+            )
+        )
         self._refresh_task: Optional[asyncio.Task] = None
 
     async def start(self) -> None:
