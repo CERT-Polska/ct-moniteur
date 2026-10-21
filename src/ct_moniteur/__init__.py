@@ -363,7 +363,7 @@ class TiledLogClient:
             except httpx2.HTTPStatusError as e:
                 if e.response.status_code != 404:
                     raise
-                logger.warning(f"Tile {tile_idx} not yet available from {self.log_meta.url}")
+                logger.debug(f"Tile {tile_idx} not yet available from {self.log_meta.url}")
                 return
 
             for i, leaf in enumerate(leaves):
@@ -382,7 +382,7 @@ class TiledLogClient:
             except httpx2.HTTPStatusError as e:
                 if e.response.status_code != 404:
                     raise
-                logger.warning(f"Tile {end_tile} not yet available from {self.log_meta.url}")
+                logger.debug(f"Tile {end_tile} not yet available from {self.log_meta.url}")
                 return
 
             for i, leaf in enumerate(leaves):
