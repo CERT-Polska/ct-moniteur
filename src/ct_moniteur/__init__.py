@@ -100,14 +100,14 @@ class CertificateEntry:
     source: EntrySource
 
     # Certificate details
-    domains: List[str] = field(default_factory=list)
-    subject: str = ""
-    issuer: str = ""
-    not_before: Optional[datetime] = None
-    not_after: Optional[datetime] = None
-    serial_number: str = ""
-    fingerprint_sha256: str = ""
-    fingerprint_sha1: str = ""
+    domains: List[str]
+    subject: str
+    issuer: str
+    not_before: datetime
+    not_after: datetime
+    serial_number: str
+    fingerprint_sha256: str
+    fingerprint_sha1: str
 
 
 @dataclass
