@@ -18,6 +18,7 @@ This library is an independent project and is not an official product. It is pro
 - **Multi-log monitoring** - Monitor all public CT logs concurrently
 - **Comprehensive error handling** - Robust error handling and logging
 - **CLI tool included** - Monitor CT logs without writing code
+- **Post-quantum detection** - Flag certificates signed with ML-DSA or SLH-DSA
 
 ## Installation
 
@@ -252,6 +253,8 @@ Each certificate entry contains:
 - `serial_number` - Certificate serial number (hex)
 - `fingerprint_sha256` - SHA-256 fingerprint
 - `fingerprint_sha1` - SHA-1 fingerprint
+- `signature_algorithm` - Certificate signature algorithm name
+- `is_post_quantum` - True when the signature algorithm is ML-DSA or SLH-DSA
 
 ### MonitorStats
 
