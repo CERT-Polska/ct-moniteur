@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import IntEnum
-from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Union, cast
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional, Tuple, Union, cast
 
 import httpx2
 from cryptography import x509
@@ -90,6 +90,27 @@ class EntrySource:
     log: LogMeta
 
 
+# Post-quantum signature algorithm OIDs from the NIST Computer Security Objects
+# Register, arc 2.16.840.1.101.3.4.3 (FIPS 204 ML-DSA and FIPS 205 SLH-DSA).
+POST_QUANTUM_SIGNATURE_OIDS = {
+    "2.16.840.1.101.3.4.3.17": "ML-DSA-44",
+    "2.16.840.1.101.3.4.3.18": "ML-DSA-65",
+    "2.16.840.1.101.3.4.3.19": "ML-DSA-87",
+    "2.16.840.1.101.3.4.3.20": "SLH-DSA-SHA2-128s",
+    "2.16.840.1.101.3.4.3.21": "SLH-DSA-SHA2-128f",
+    "2.16.840.1.101.3.4.3.22": "SLH-DSA-SHA2-192s",
+    "2.16.840.1.101.3.4.3.23": "SLH-DSA-SHA2-192f",
+    "2.16.840.1.101.3.4.3.24": "SLH-DSA-SHA2-256s",
+    "2.16.840.1.101.3.4.3.25": "SLH-DSA-SHA2-256f",
+    "2.16.840.1.101.3.4.3.26": "SLH-DSA-SHAKE-128s",
+    "2.16.840.1.101.3.4.3.27": "SLH-DSA-SHAKE-128f",
+    "2.16.840.1.101.3.4.3.28": "SLH-DSA-SHAKE-192s",
+    "2.16.840.1.101.3.4.3.29": "SLH-DSA-SHAKE-192f",
+    "2.16.840.1.101.3.4.3.30": "SLH-DSA-SHAKE-256s",
+    "2.16.840.1.101.3.4.3.31": "SLH-DSA-SHAKE-256f",
+}
+
+
 @dataclass
 class CertificateEntry:
     """Parsed certificate entry"""
@@ -108,6 +129,8 @@ class CertificateEntry:
     serial_number: str
     fingerprint_sha256: str
     fingerprint_sha1: str
+    signature_algorithm: str
+    is_post_quantum: bool
 
 
 @dataclass
@@ -841,6 +864,15 @@ class CertificateParser:
 
         return h.hex(":").upper()
 
+    @staticmethod
+    def resolve_signature_algorithm(cert: x509.Certificate) -> Tuple[str, bool]:
+        """Return the certificate signature algorithm name and whether it is post-quantum."""
+        oid = cert.signature_algorithm_oid.dotted_string
+        if oid in POST_QUANTUM_SIGNATURE_OIDS:
+            return POST_QUANTUM_SIGNATURE_OIDS[oid], True
+        name = getattr(cert.signature_algorithm_oid, "_name", None) or oid
+        return name, False
+
     @classmethod
     def parse_log_entry(cls, log_entry: LogEntry, source: EntrySource) -> CertificateEntry:
         """Parse a LogEntry into a CertificateEntry"""
@@ -853,6 +885,7 @@ class CertificateParser:
 
         cert = cls.parse_x509_certificate(log_entry.entry)
         domains = cls.extract_domains(cert)
+        signature_algorithm, is_post_quantum = cls.resolve_signature_algorithm(cert)
 
         return CertificateEntry(
             source=source,
@@ -867,6 +900,8 @@ class CertificateParser:
             serial_number=format(cert.serial_number, "X"),
             fingerprint_sha256=cls.calculate_fingerprint(log_entry.entry, "sha256"),
             fingerprint_sha1=cls.calculate_fingerprint(log_entry.entry, "sha1"),
+            signature_algorithm=signature_algorithm,
+            is_post_quantum=is_post_quantum,
         )
 
 
